@@ -18,8 +18,8 @@
 . None
 . ~Контрукции правления потоком
 
-image::types1.png[]
-image::types2.png[]
+image::types1.jpg[]
+image::types2.jpg[]
 
 == Числовой тип
 
