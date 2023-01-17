@@ -1,0 +1,108 @@
+= функциональное программирование
+
+Функция в питоне - такой же объект первого класса, как и переменная или объект класса. Фукции можно передавать как аргументы другим функциям.
+
+[source,python]
+----
+def caller(func,params):
+    return func(*params)
+    
+def printer(name):
+    print('Hi, {}!'.format(name))
+    
+caller(priter,['Andy'])
+----
+
+Функции можно вкладывать друг в друга (обычно ограничиваются двумя уровнями):
+
+[source,python]
+----
+def get_multiplier():
+    def inner(a,b):
+        return a*b
+    return inner
+
+multiplier = get_multiplier()
+multiplier(10,11)
+print(multiplier.___name__) #inner
+----
+
+== Замыкание
+Во внешнюю функцию тоже можно передавать аргументы:
+
+[source,python]
+----
+def get_multiplier(number):
+    def inner(a):
+        return a * number
+    return inner
+
+multiplier_by_2 = get_multiplier(2)
+multiplier_by_2(10) #10*2
+----
+
+== Map
+
+[source,python]
+----
+def func(a):
+    return a ** 2
+    
+map(func,range(n)) #вернет map-object, в котором будут квадраты от 0 до n-1
+
+list(map(func,range(n))) #[...]
+----
+
+== filter
+
+[source,python]
+----
+def check_func(a):
+    return a>0
+
+list(filter(check_func,range(-2,3))) #вернет числа от -3 до 2, которые >0 ([1,2])
+----
+
+== Анонимные функции (lambda)
+
+[source,python]
+----
+#аналог к примеру на map выше, только без создания отдельной func(), возвращающую квадраты чисел
+list(map(lambda x: x ** 2, range(n))) #лямбда принимает один параметр (x) и возвращает его возведенным в квадрат
+
+type(lambda x: x ** 2) #function
+----
+
+== Модуль functools
+
+[source,python]
+----
+from functools import reduce
+
+def mult(a,b):
+    return a*b
+
+reduce(func,range(n)) #reduce применяет func с двумя параметрами к первой паре в списке, а затем к паре "последний результат+следующий элемент списка" вплоть до n-1
+
+#Аналог через лямбду:
+reduce(lambda a, b: a * b,range(n))
+----
+
+ПОЧИТАТЬ: partial()
+
+== Списочные выражения
+
+[source,python]
+----
+even_list = [i for i in range(10) if i%2 == 0] #вернет список из всех четных чисел от 0 до 9
+
+sq_dict = {i:i ** 2 for i in range(6)} #вернет словарь из чисел от 0 до 5 и соответствующих им квадратам
+
+tens_set = {i // 10 for i in range(100)} #вернет кучу из всех десятков (0, 10, 20...) для всех чисел от 0 до 99
+
+print(type(i for i in range(10))) #<class 'generator'> - итерируемый объект
+
+n_s = range(10)
+sq_s = [i ** 2 for i in n_s]
+list(zip(n_s,sq_s)) #[ (0,0) , (1,1) , (2,4) , (3,9) , ... ]
+----
