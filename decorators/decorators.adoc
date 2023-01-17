@@ -1,0 +1,137 @@
+= Декораторы
+
+Декоратор - функция, принимающая одну функцию и возвращающая еще одну функцию
+
+Простейший декоратор:
+
+[source,python]
+----
+def decorator(func):
+    return func
+
+@decorator
+def decorated():
+    print('Hi!')
+    
+#decorated = decorator(decorated)
+----
+
+Другой простейший декоратор:
+
+[source,python]
+----
+def decorator(func):
+    def inner():
+        pass
+    return inner
+
+@decorator
+def decorated():
+    print('Hi!')
+    
+#decorated = decorator(decorated)
+
+print(decorated.__name__) #inner
+----
+
+Более сложный пример:
+
+[source,python]
+----
+def logger(func):
+    def wrapped(num_list):
+        result = func(num_list)
+        #тут можно записать в файл с помощью контекстного менеджера
+        print(result)
+        return result
+    return wrapped
+
+@logger
+def summutor(num_list):
+    return sum(num_list)
+
+print(summutor([1,2,3])) #6
+print(summutor.__name__) #wrapped
+----
+
+Один и тот же декоратор можно применять сразу к нескольким функциям. Так logger можно применять к функциями, принимающим num_list.
+
+Однако в идеале декоратор должен выглядеть так: 
+
+[source,python]
+----
+def logger(func):
+    def wrapped(*args,**kwargs):
+        result = func(*args,**kwargs)
+        print(result)
+        return result
+    return wrapped
+
+@logger
+def summutor(num_list):
+    return sum(num_list)
+
+print(summutor([1,2,3])) #6
+print(summutor.__name__) #wrapped
+----
+
+[source,python]
+----
+import functools
+
+def logger(func):
+    @functools.wraps(func) #вызов __name__ декорируемой функции вернет имя самой этой функции. Это сделано для отладки
+    def wrapped(*args,**kwargs):
+        result = func(*args,**kwargs)
+        print(result)
+        return result
+    return wrapped
+
+@logger
+def summutor(num_list):
+    return sum(num_list)
+
+print(summutor([1,2,3])) #6
+print(summutor.__name__) #summutor
+----
+
+Также декоратор может принимать параметры
+
+[source,python]
+----
+decorated = decorator(*args,**kwargs)(decorated)
+----
+
+== Decorators chain
+
+[source,python]
+----
+def first_decorator(func):
+    def wrapped():
+        print('1st decorator')
+        return func()
+    return wrapped
+
+def second_decorator(func):
+    def wrapped():
+        print('2nd decorator')
+        return func()
+    return wrapped
+    
+@first_decorator
+@second_decorator
+def decorated():
+    print('decorated')
+    
+#decorated = second_decorator(decorated)
+#decorated = first_decorator(decorated)
+#
+#OR
+#
+#decorated = first_decorator(second_decorator(decorated))
+
+decorated()
+#1st decorator
+#2nd decorator
+#decorated
+----
