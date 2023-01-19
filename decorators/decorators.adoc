@@ -100,6 +100,26 @@ print(summutor.__name__) #summutor
 [source,python]
 ----
 decorated = decorator(*args,**kwargs)(decorated)
+
+def logger(prefix):
+    def decorator(func):
+        def inner(*args,**kwargs):
+            res = func(*args,**kwargs) #шаблонная строка (не меняется от декоратора к докоратору)
+            print(prefix,res)
+            return res #тоже шаблонная строка
+        return inner
+    return decorator
+
+@logger(">>")
+def a(n):
+    return n+3
+
+@logger("<<")
+def b(x,y):
+    return str(y)+"__"+str(x+2)
+
+a(0) #>> 3
+b(0,3) #<< 3__2
 ----
 
 == Decorators chain
