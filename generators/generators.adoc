@@ -1,0 +1,66 @@
+= Генераторы
+
+[source, python]
+----
+def list_generator(L):
+    for el in L:
+        yield el
+        print(f'After yielding {el}')
+        
+generator = list_generator(range(3))
+print(type(generator)) #<class 'generator'>
+
+next(generator)
+next(generator)
+next(generator)
+
+#After yielding 0 
+#After yielding 1
+----
+
+При дохождении функции до yield её выполннение останавливается и запоминается состояние. Продолжение начнет выполняться только после повторного вызова этой функции и именно из последнего сохраненного состояния.
+
+[source, python]
+----
+def fibonacci(n):
+    a = b = 1
+    for _ in range(n):
+        yield a
+        a, b = b, a+b
+
+for el in fibonacci(10):
+    print(el)
+----
+
+Плюсы в том, что из-за генератора не требуется запоминать большое число всерастущих чисел Фибоначчи.
+
+Еще примеры:
+
+[source, python]
+----
+def f():
+    t = 145
+    while True:
+        v = yield t+3
+        t = t - v
+
+a = f()
+print(next(a)) #148
+print(a.send(10)) #138
+print(a.send(20)) #118
+----
+
+[source, python]
+----
+def f():
+    t = 145
+    while True:
+        v = yield t+3
+        t = t - v
+        yield
+
+a = f()
+print(next(a)) #148
+print(a.send(10)) #None
+print(a.send(20)) #138
+----
