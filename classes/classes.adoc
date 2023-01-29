@@ -1,0 +1,410 @@
+= Классы
+
+Все стандартные типы в питоне - на самом деле классы. Можно проверить через type() или isinstance():
+
+[source,python]
+----
+a = 10
+type(a) # <class 'int'>
+print(isinstance(a,int)) #True
+----
+
+Классы принято называть в CamelCase.
+Классы могут содержать информационную строку:
+
+[source,python]
+----
+class Robot:
+    """Класс для создания роботов"""
+
+print(Robot) #<class '__main__.Robot'>
+Robot.__doc__ #"""Класс для создания роботов"""
+
+print(Robot.__doc__)
+print(obj.__doc__)
+
+#"""Класс для создания роботов"""
+#"""Класс для создания роботов"""
+----
+
+Метод _\__init___() - магический метод, позволяющий переопределить инициализацию класса. Также можно использовать переопределение после инициализации:
+[source,python]
+----
+class Planet:
+    def __init__(self,name,population = None):
+        self.name = name
+
+mars = Planet("Mars")
+mars.name = "2nd Earth?"
+----
+
+Метод _\__str___() - магический метод, позволяющий писать print(class_obj):
+
+[source,python]
+----
+class Planet:
+    def __init__(self,name):
+        self.name = name
+    
+    def __str__(self):
+        return self.name
+    
+earth = Planet('Earth')
+print(earth) #Earth
+----
+
+Экземпляры классов хэшируемы. Это значит, что объект класса может быть ключем словаря.
+
+== Магические (Dunder) методы
+
+Начинаются с '__' 
+
+[source,python]
+----
+class Banknote:
+    
+    def __init__(self,value):
+        self.value = value
+    
+    def __repr__(self):
+        return f'Banknote({self.value})' #строка для программиста объектов класса. См. eval ниже
+    
+    def __str__(self):
+        return f'Банкнота номиналом в {self.value} рублей' #строка для "простых смертных"
+    
+    def __eq__(self,other):#обычно проверяет равенство всех полей. Однако первым делом следует проверить, что тип other ожидаем
+        if other is None or not isinstance(other,Banknote):
+            return False
+        return self.value == other.value
+    
+    def __lt__(self,other): #lt = less then , gt = greater then, le = less or equal , ge = greater or equal
+        if other is None or not isinstance(other,Banknote):
+            return False
+        return self.value < other.value
+    
+class Iterator: #см. Wallet.__next__() & Wallet.__iter__() ниже
+    
+    def __init__(self,container):
+        self.container = container
+        self.index = 0
+        
+    def __next__(self): #если класс реализовал __next__() - он (класс) тератор!
+        while 0 <= self.index < len(self.container):
+            value = self.container[self.index]
+            self.index += 1
+            return value
+        raise StopIteration
+    
+class Wallet:
+    
+    def __init__(self,*banknotes:Banknote):#*args,**kwargs
+        self.container = []
+        self.container.extend(banknotes)
+        self.index = 0 #для итератора (__next__())
+        
+    def __repr__(self):
+        return f'Wallet({self.container})'
+    
+    def __contains__(self,item):
+        #24:27 - почему не пишем проверку
+        return item in self.container
+    
+    def __bool__(self): #для if , while
+        return len(self.container) > 0 #len() работает за константу времени! Известна всегда, какой бы большой ни был массив
+
+    def __len__(self):
+        return len(self.container)
+    
+    def __call__(self): #могут быть *args,**kwargs
+        return f'{sum(e.value for e in self.container)} рублей'
+    
+    def __iter__(self):
+        #Есть два метода сделать объект итерируемым. (Итератор может сделать next() или остановиться, выбросив exception) 
+        #1.Вернуть итератор. Тогда при повторном вопросе next() у ДРУГОГО объекта будет возвращен НОВЫЙ итератор
+        #2.Сам объект "косит" под итератор. Тогда при повторном вопросе next() у ДРУГОГО объекта итератор сбросится У ОБОИХ!
+        #return self
+        return Iterator(self.container)
+    
+    def __next__(self): #если класс реализовал __next__() - он (класс) тератор!
+        while 0 <= self.index < len(self.container):
+            value = self.container[self.index]
+            self.index += 1
+            return value
+        self.index = 0 #эта строка НЕ НУЖНА, если использовать класс Iterator ("пользовательский")
+        raise StopIteration
+        
+    def __getitem__(self,item): #вызывается по-умолчанию, если нет __iter__()
+        if 0 < item or item > len(self.container):
+            raise IndexError #исключений не следует бояться использовать, а следует использовать сразу, как только это надо
+        return self.container[item]
+    
+    def __setitem__(self,key:int,value:Banknote):
+        if 0 < key or key > len(self.container):
+            raise IndexError
+        self.container[key] = value
+    
+banknote50 = Banknote(50)
+print(banknote50) #вызывает __str__()
+print(f'{banknote50!r}') #вызывает __repr__()
+#если не определен repr и str, print(banknote) вернет адрес в памяти для banknote
+
+other50 = eval(repr(banknote50)) #ОПАСНО! Юзать в крайних случаях при 150% уверенностью, что __repr__ возвращает такую строку, что по ней можно создать объект
+print(other50) #Банкнота номиналом в 50 рублей
+
+print(other50 == banknote50) #True. Если __eq__() не переопределен равенство будет соблюдаться лишь про сравнении объекта с самим собой!
+
+banknote100 = Banknote(100)
+print(banknote100 < banknote50) #False
+
+wallet = Wallet(banknote50,banknote100)
+print(wallet) #Wallet([Banknote(50), Banknote(100)]) #вызвало и repr банкноты!!
+
+print(banknote100 in wallet) #вызывает __contains__() #True
+print(Banknote(100) in wallet) #True
+
+if wallet: #вызывает __bool__() #по умолчанию любой объект == True. Даже если класс пуст.
+    print(len(wallet)) #2 #вызывает __len__()
+    
+print(wallet()) #150 рублей #вызывает __call__()
+
+for money in wallet:
+    print(money)
+    #Выведет
+    #Банкнота номиналом в 50 рублей
+    #Банкнота номиналом в 100 рублей
+    
+for money in wallet:
+    print(money)
+    #Выведет
+    #Банкнота номиналом в 50 рублей
+    #Банкнота номиналом в 100 рублей
+    
+print(wallet[0]) #вызывает __getitem__() #вернет "Банкнота номиналом в 50 рублей"
+#print(wallet[-1]) #exception! См. текущую реализацию Wallet.__getitem__()!
+
+wallet[0] = Banknote(150) 
+print(wallet[0]) #вернет "Банкнота номиналом в 150 рублей"
+----
+
+== Атрибуты класса
+
+Атрибут класса - переменная, относящаяся непосредственно к классу, а не объекту.
+
+Приватные атрибуты начинают с "__". Приватные атрибуты не видны в наследниках!
+
+[source,python]
+----
+class Planet:
+    count = 0 #public атрибут - счетчик объектов
+    def __init__(self,name,population = None):
+        self.name = name
+        self.population = population
+        Planet.count += 1
+    
+earth = Planet('Earth')
+mars = Planet('Mars')
+print(Planet.count) #2
+
+print(mars.count) #питон ищет поле count в объекте, не находит и ищет среди атрибутов
+
+print(earth.__dict__) #__dict__ - это словарь всех полей объекта и их значения
+#{'name': 'Earth', 'population': None}
+
+print(mars.__class__) #__main__.Planet
+----
+
+== Деструкторы
+
+Завершение процессов объекта класса (закрытие файла, разрыв соединения, закрытие процесса или потока и пр.) лучше описывать не в магическом методе _\__del___(), а явно в деструкторе. Лучше делать так, так как метод _\__del___() относится к атоматической сборке мусора и запускается независимо от программиста. Нет гарантии, что все будет так и тогда, как и когда мы этого ожидаем. Поэтому стоит создавать и вызывать деструктор отдкльно "руками" каждый раз. Хотя иногда (_иногда_) можно автоматизировать процесс, например, контекстным менеджером (with, удаление файла).
+
+Возможно, есть разница для \\__del__ между тем, чтобы закрыть скрипт питона через консоль и закруть принудительно процесс (нажать крестик). Допустим, есть скрипт с бесконечным циклом while. Тогда прерывание питона
+
+== Наследование. Статические методы и методы класса.
+
+Метод _super()_ возвращает родительский класс.
+
+В питоне нет разделения на _private_, _public_ и _protected_, и достучаться можно до любого поля и метода. Однако на уровне соглашения принято называть с '\_' методы, которые либо являются аналогами _private_, либо которые являются временными и могут быть впоследствии удалены или изменены программистом класса.
+
+Обычный метод можно вызывать только от объекта! Не от класса. Однако эквивалентны записи
+
+[source,python]
+----
+obj.instancemethod()
+#=====
+ToyClass.instancemethod(obj)
+----
+
+== _@classmethod_ 
+Декоратор, смысл которого будет понятен после введения наследования.
+
+[source,python]
+----
+class Event:
+    def __init__(self,description):
+        self.description = description
+        print(self.description)
+        
+    @classmethod
+    def from_out(cls,user_input):
+        return cls(user_input) #дополняем конструктор __init__(self...)
+    
+Event.from_out("My_event_1")
+Event("My_event_2")
+----
+
+Методы класса могут менять состояние класса, что отразится на всех объектах этого класса, но не могут менять конкретный объект.
+
+Можно сказать, метод класса используется для альтернативного конструктора (он может вызвать \\__init__)
+
+Метод класса можно определить по отсутствию употребления в нем self. Если self отсутствует, скорее всего стоит задуматься о том, чтобы сделать метод методом класса.
+
+[source,python]
+----
+dict.fromkeys("12345") #пример метода класса
+#{'1': None, '2': None, '3': None, '4': None, '5': None}
+----
+
+== Статические методы
+
+Статические методы декларируются при помощи декоратора _@staticmethod_. Им не нужен определённый первый аргумент (ни self, ни cls).
+
+Их можно воспринимать как методы, которые “не знают, к какому классу относятся”.
+
+Таким образом, статические методы прикреплены к классу (принадлежат его области имен) лишь для удобства и не могут менять состояние ни класса, ни его экземпляра.
+
+Можно сказать, статические методы - это вспомогательные методы, принадлежащие классу лишь "тематически", чтобы не делать их глобальными функциями.
+
+Статические методы не могут получить доступ к параметрам класса или объекта. Они работают только с теми данными, которые им передаются в качестве аргументов.
+
+Статический метод можно определить по отсутствию употребления в нем ни self, ни cls. Если отсутствуют self и cls, и метод контекстно связан  классом, скорее всего стоит задуматься о том, чтобы сделать метод статтическим.
+
+== Properties
+
+[source,python]
+----
+class Robot:
+    
+    def __init__(self,power):
+        self._power = power
+    
+    power = property()
+    
+    @power.setter
+    def power(self,value):
+        if value < 0:
+            self._power = 0
+        else:
+            self._power = value
+    
+    @power.getter
+    def power(self):
+        return self._power
+    
+    @power.deleter
+    def power(self):
+        print("Make robot unless")
+        del self._power
+        
+wall_e = Robot(100)
+wall_e.power = -20 #все сделано для того, чтобы обезопасить определенные поля класса от некорректных данных
+print(wall_e.power) # сбросится в 0 с помощью @power.setter
+----
+
+https://medium.com/nuances-of-programming/python-%D1%81%D1%82%D0%B0%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B5-%D0%BC%D0%B5%D1%82%D0%BE%D0%B4%D1%8B-%D0%BC%D0%B5%D1%82%D0%BE%D0%B4%D1%8B-%D0%BA%D0%BB%D0%B0%D1%81%D1%81%D0%B0-%D0%B8-%D1%8D%D0%BA%D0%B7%D0%B5%D0%BC%D0%BF%D0%BB%D1%8F%D1%80%D0%B0-%D0%BA%D0%BB%D0%B0%D1%81%D1%81%D0%B0-3e8529d24786[Статья о трех типах методов - обычных (экземпляра), класса и статических]
+
+== Наследование. Множественное наследование
+
+[source,python]
+----
+class Type1:
+    def m1(self):
+        print("type 1")
+
+class Type2:
+    def m2(self):
+        print("type 2")
+
+class TypeInherited(Type1,Type2):
+    pass
+
+obj1 = TypeInherited()
+obj1.m1()
+obj1.m2()
+
+print(isinstance(obj1,TypeInherited)) #True
+print(isinstance(obj1,Type2)) #True
+print(issubclass(Type2,object)) #True
+print(issubclass(Type2,int)) #False
+print(issubclass(TypeInherited,Type2)) #True
+print(issubclass(Type2,object)) #True
+print(issubclass(Type2,int)) #False
+----
+
+*Примечание:* лучше не использовать слишком много наследников - это может загрязнить код!
+
+Атрибуты с "__" (приватные в родителе) не видны в наследниках!
+
+\\__mro__ хранит последовательность наследования:
+
+[source,python]
+----
+class C1:
+    def a(self):
+        print('a from C1')
+
+class C2(C1):
+    def a(self):
+        print('a from C2')
+        
+class C3(C1):
+    def a(self):
+        print('a from C3')
+        
+class C4(C3):
+    def a(self):
+        print('a from C4')
+
+class C5(C4,C2):
+    def a(self):
+        print('\nC5:')
+        super(C5,self).a()
+        print(C5.__mro__)
+        print('\nC4:')
+        super(C4,self).a()
+        print(C4.__mro__)
+        print('\nC3:')
+        super(C3,self).a()
+        print(C3.__mro__)
+        print('\nC2:')
+        super(C2,self).a()
+        print(C2.__mro__)
+        
+obj = C5()
+obj.a()
+
+#C5:
+#a from C4
+#(<class '__main__.C5'>, <class '__main__.C4'>, <class '__main__.C3'>, <class '__main__.C2'>, <class '__main__.C1'>, <class 'object'>)
+
+#C4:
+#a from C3
+#(<class '__main__.C4'>, <class '__main__.C3'>, <class '__main__.C1'>, <class 'object'>)
+
+#C3:
+#a from C2
+#(<class '__main__.C3'>, <class '__main__.C1'>, <class 'object'>)
+
+#C2:
+#a from C1
+#(<class '__main__.C2'>, <class '__main__.C1'>, <class 'object'>)
+----
+
+При вызове super(class,obj) ищется class в \\__mro__ и возвращается предок этого класса. 
+
+== Композиция
+
+Композиция - это альтернатива множественному наследованию. При композиции объекты могут создаваться "не лету" при выполнении программы.
+
+Вместо множественного наследования созаются и передаются объекты других классов в коснтруктор данного ("наследуемого"). При этом класс самих объектов может менять в ходе разработки программы и заменяться на другой функционал. Таким образом не требуется менять много кода, как при наследовании.
+
+Композиция - это НЕ часть языка, а лишь паттерн дизайна. Реализовать композицию можно, например, и на с++.
